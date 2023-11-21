@@ -8,3 +8,6 @@
 mimiliu97/mimiliu97 is a ✨ special ✨ repository because its `README.md` (this file) appears on your GitHub profile.
 You can click the Preview link to take a look at your changes.
 --->
+
+Click here to view my coding progress!
+https://github.com/code50/151073347.git
