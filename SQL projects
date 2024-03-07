@@ -1,0 +1,241 @@
+use AdventureWorks2017; 
+--List the entire table of Sales.SalesOrderDetail 
+select *
+from Sales.SalesOrderDetail;
+
+--List SalesOrderID, ProductID, UnitPrice, and LineTotal from the Sales.SalesOrderDetail table.  Rename SalesOrderID as "Sales Order", ProductID as "Product", UnitPrice as "Price", LineTotal as "Total Amount"  
+select SalesOrderID as [Sales Order], ProductID as Product, UnitPrice as Price, LineTotal as [Total Amount]
+from Sales.SalesOrderDetail;
+
+--Find orders with products in the Department 700 (i.e., ProductID between 700 and 799) 
+select *
+from Sales.SalesOrderDetail
+where ProductID between 700 and 799;
+
+--Find all items sold at a discount 
+select *
+from Sales.SalesOrderDetail
+where UnitPriceDiscount>0.00;
+
+--Find all items without a CarrierTrackingNumber 
+select *
+from Sales.SalesOrderDetail
+where CarrierTrackingNumber is null;
+
+--Find orders with products 773 and 824 that were not sold at a discount 
+select *
+from Sales.SalesOrderDetail
+where (ProductID=773 or ProductID=824) and UnitPriceDiscount=0.00;
+
+--Check if the LineTotal values are all calculated correctly.  Note that LineTotal = OrderQty * UnitPrice * (1-UnitPriceDiscount)  
+select *, LineTotal - (OrderQty * UnitPrice * (1-UnitPriceDiscount)) as [LineTotal Check]
+from Sales.SalesOrderDetail
+where (LineTotal - OrderQty * UnitPrice * (1-UnitPriceDiscount)>0.01) or (LineTotal - OrderQty * UnitPrice * (1-UnitPriceDiscount)<-0.01);
+
+--Find a distinct list of products and prices sorted by ProductID first in ascending order and then by Price in descending order 
+select distinct ProductID, UnitPrice
+from Sales.SalesOrderDetail
+order by ProductID, UnitPrice desc;
+
+--Find all items that were modified in 2014 and sort the results by ModifiedDate in ascending order 
+select *
+from Sales.SalesOrderDetail
+where ModifiedDate between '2014-01-01' and '2014-12-31'
+order by ModifiedDate;
+
+use AdventureWorks2017;
+select * 
+from Sales.SalesOrderHeader;
+
+--How many customers who made at least one order in this period? 
+select COUNT(distinct CustomerID)
+from Sales.SalesOrderHeader;
+
+--What is the total net sales (before tax and freight) in this period? 
+select sum(SubTotal) 
+from Sales.SalesOrderHeader;
+
+--What is the average shipping cost for online orders? (Hint: online orders have OnlineOrderFlag=1)
+select AVG(Freight) 
+from Sales.SalesOrderHeader
+where OnlineOrderFlag=1;
+
+--Show the number of orders placed by each customer and sort the result by the number of orders in descending order 
+select CustomerID, COUNT(*) as [Number of Orders]
+from Sales.SalesOrderHeader
+group by CustomerID 
+order by [Number of Orders] desc;
+
+--Show the earliest order date, the most recent order date, and the total amount for each customer.  Sort the result by CustomerID in ascending order 
+select CustomerID, min(OrderDate) as Earliest, MAX(OrderDate) as [Most Recent], sum(TotalDue) as [Total Amount]
+from Sales.SalesOrderHeader
+group by CustomerID 
+order by CustomerID;
+
+--Show the number of orders, total sales amount, and average order amount by order type (online vs. store) 
+select OnlineOrderFlag, count(SalesOrderID) as [Number of Orders], SUM(TotalDue) as [Total Amount], AVG(TotalDue) as [Average Order Amount] 
+from Sales.SalesOrderHeader
+group by OnlineOrderFlag;
+
+--Show the net sales (before tax and freight) by territory and sales person. Orders without associated sales person should not be included.  Sort the results by territoryid and salespersonid in ascending orders
+select TerritoryID, SalesPersonID, SUM(SubTotal) as [Net Sales]
+from Sales.SalesOrderHeader
+where SalesPersonID is not null
+group by TerritoryID, SalesPersonID
+order by TerritoryID, SalesPersonID;
+
+--Are there any customers who have both online and offline orders? 
+select CustomerID, count(OnlineOrderFlag) as [Order Count]
+from Sales.SalesOrderHeader
+group by CustomerID
+having count(distinct OnlineOrderFlag)>1;
+
+--What is the average tax rate by territory? Did the company charge a higher tax rate for online orders? 
+select TerritoryID, AVG(TaxAmt/SubTotal) as [Average Tax Rate]
+from Sales.SalesOrderHeader
+group by TerritoryID;
+
+select OnlineOrderFlag, AVG(TaxAmt/SubTotal) as [Average Tax Rate]
+from Sales.SalesOrderHeader
+group by OnlineOrderFlag;
+
+--Show the top 10 busiest order days (i.e., the days having the largest number of orders) during this period? 
+select top 10 OrderDate, COUNT(distinct SalesOrderID) as [Number of Orders]
+from Sales.SalesOrderHeader
+group by OrderDate
+order by COUNT(SalesOrderID) desc;
+
+use AdventureWorks2017;
+select *
+from Sales.SalesOrderDetail;
+
+select *
+from Sales.SalesOrderHeader;
+
+select *
+from Sales.Customer;
+
+select * 
+from Sales.SalesPerson;
+
+--Show the total number of items in each order, sorted by SalesOrderID 
+select SalesOrderID, sum(OrderQty) as [Number of Items]
+from Sales.SalesOrderDetail
+group by SalesOrderID;
+
+--Show the number of different products in each order, sorted by SalesOrderID 
+select SalesOrderID, count(distinct ProductID) as [Number of Items]
+from Sales.SalesOrderDetail
+group by SalesOrderID;
+
+--Show the average price of various products paid by each individual customer (not store customer) 
+select CustomerID, ProductID, AVG(LineTotal) as [Average Price]
+from Sales.SalesOrderHeader, Sales.SalesOrderDetail
+where Sales.SalesOrderHeader.SalesOrderID = Sales.SalesOrderDetail.SalesOrderID
+group by CustomerID, ProductID
+order by CustomerID, ProductID;
+
+select c.customerid, productid, avg(LineTotal) as [Average Price] 
+from sales.salesorderheader H, sales.salesorderdetail D, sales.customer C 
+where h.salesorderid=d.salesorderid and h.customerid=c.customerid and personid is not null 
+group by c.customerid, productid 
+order by c.customerid, productid; 
+
+--Show the total net sales (before tax and freight), Sales Quota, and Commissions by sales person
+select SalesPersonID, SUM(SubTotal) as [Total Sales], max(SalesQuota) as [Sales Quota], sum(CommissionPct*SubTotal) as Commission
+from Sales.SalesPerson, Sales.SalesOrderHeader
+where Sales.SalesPerson.BusinessEntityID = Sales.SalesOrderHeader.SalesPersonID
+group by SalesPersonID;
+
+--Find the highest single store sales for each saleperson 
+--[Hint: Each salesperson is responsible for multiple stores. Find the highest sales amount among the stores managed by each salesperson.  You may need to use a temporary table to find the solution.] 
+select StoreID, SalesPersonID, sum(SubTotal) as [Total Due]
+into #HighestStoreSales1
+from Sales.Customer c, Sales.SalesOrderHeader h
+where h.customerid=c.customerid and SalesPersonID is not null
+group by StoreID, SalesPersonID;
+
+select SalesPersonID, MAX([Total Due]) as [Total Due]
+from #HighestStoreSales1
+group by SalesPersonID;
+
+
+
+--Find all items that have a CarrierTrackingNumber starting with "3373" 
+select *
+from Sales.SalesOrderDetail
+where CarrierTrackingNumber like '3373%';
+
+use AdventureWorks2017;
+select * 
+from HumanResources.Department;
+
+select * 
+from HumanResources.EmployeeDepartmentHistory;
+
+select * 
+from HumanResources.EmployeePayHistory;
+
+select * 
+from HumanResources.Employee;
+
+-- Show a list of male employees who switched job during this period 
+select dh.BusinessEntityID
+from HumanResources.EmployeeDepartmentHistory dh, HumanResources.Employee e
+where dh.BusinessEntityID=e.BusinessEntityID and Gender='M' and EndDate is not null;
+
+--Show the current number of employees for those departments have at least one employee 
+SELECT d.DepartmentID, d.Name, count(distinct BusinessEntityID) as [Number of Employees]
+FROM HumanResources.Department d
+join HumanResources.EmployeeDepartmentHistory dh ON d.DepartmentID = dh.DepartmentID 
+where dh.EndDate is null
+GROUP BY d.DepartmentID, d.Name
+HAVING COUNT(distinct BusinessEntityID) > 0;
+
+--Show the current number of married or female employees in each group (groupname) 
+select d.GroupName, count(e.BusinessEntityID) as [Number of Employees]
+from HumanResources.Department d
+join HumanResources.EmployeeDepartmentHistory dh on d.DepartmentID=dh.DepartmentID
+join HumanResources.Employee e on dh.BusinessEntityID=e.BusinessEntityID
+where dh.EndDate is null and (e.MaritalStatus='M' or e.Gender='F')
+GROUP BY d.GroupName;
+
+--Show all employees and the department to which they currently belong.   
+select
+from HumanResources.Employee e left join HumanResources.EmployeeDepartmentHistory dh
+on e.BusinessEntityID=dh.BusinessEntityID
+left join HumanResources.Department d on dh.DepartmentID=d.DepartmentID
+where EndDate is null;
+
+--Show the employees who were in the engineering department as of Jan. 1, 2010 
+select dh.BusinessEntityID
+from HumanResources.Department d
+join HumanResources.EmployeeDepartmentHistory dh on d.DepartmentID=dh.DepartmentID
+where dh.StartDate<'2010-01-01' and d.Name='Engineering' and (EndDate is null or EndDate>'2010-01-01')
+group by dh.BusinessEntityID;
+
+--Find the most recent pay rate for employee No. 4 
+select BusinessEntityID, Rate
+from HumanResources.EmployeePayHistory
+where RateChangeDate = (select MAX(RateChangeDate) from HumanResources.EmployeePayHistory where BusinessEntityID=4);
+
+--List all employee's NationalIDNumber, JobTitle, and HireDate for those who have ever worked in the Department 7 (Use a sub-query instead of Join) 
+select NationalIDNumber, JobTitle,HireDate
+from HumanResources.Employee
+where BusinessEntityID in (select BusinessEntityID from HumanResources.EmployeeDepartmentHistory where DepartmentID=7);
+
+--Find a list of employees whose highest pay rate is above the average pay rate of all employees 
+select BusinessEntityID, MAX(Rate) as [Max Rate]
+from HumanResources.EmployeePayHistory
+group by BusinessEntityID
+having max(Rate) > (select avg(Rate) from HumanResources.EmployeePayHistory);
+
+--Find the most current pay rate and change date for all employees 
+select distinct ph.BusinessEntityID, ph.RateChangeDate, ph.Rate
+from HumanResources.EmployeePayHistory ph
+inner join (select BusinessEntityID, max(RateChangeDate) as [Pay Rate Change Date] from HumanResources.EmployeePayHistory group by BusinessEntityID) a
+on ph.BusinessEntityID=a.BusinessEntityID and ph.RateChangeDate=a.[Pay Rate Change Date];
+
+--Show the pay rate and the difference between the pay rate and average rate --of the company for all employees 
+select BusinessEntityID, Rate, Rate-(select AVG(rate) from HumanResources.EmployeePayHistory) as Difference
+from HumanResources.EmployeePayHistory;
